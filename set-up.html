@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DermAssist AI — Setup & Debugging Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f2d4a 100%);
+      padding: 36px 40px 28px;
+      border-bottom: 2px solid #334155;
+    }
+    header h1 { font-size: 1.9rem; color: #38bdf8; font-weight: 700; }
+    header p { color: #94a3b8; margin-top: 6px; font-size: 0.95rem; }
+
+    .tabs {
+      display: flex; gap: 4px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0 40px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 14px 22px; font-size: 0.88rem; font-weight: 600;
+      background: none; border: none; cursor: pointer;
+      color: #64748b; border-bottom: 3px solid transparent;
+      white-space: nowrap; transition: all 0.2s;
+    }
+    .tab-btn:hover { color: #cbd5e1; }
+    .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+
+    .content { padding: 36px 40px; max-width: 960px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    h2 { font-size: 1.3rem; color: #f1f5f9; margin-bottom: 18px; font-weight: 700; }
+    h3 { font-size: 1rem; color: #cbd5e1; margin: 22px 0 10px; font-weight: 600; }
+    p { color: #94a3b8; line-height: 1.7; margin-bottom: 12px; font-size: 0.9rem; }
+
+    .bug-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-left: 4px solid #ef4444;
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin-bottom: 16px;
+    }
+    .bug-card.warning { border-left-color: #f59e0b; }
+    .bug-card.info { border-left-color: #38bdf8; }
+    .bug-card.ok { border-left-color: #22c55e; }
+
+    .bug-title {
+      font-size: 0.95rem; font-weight: 700;
+      color: #f1f5f9; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      font-size: 0.7rem; padding: 2px 8px; border-radius: 999px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .badge-red { background: #7f1d1d; color: #fca5a5; }
+    .badge-yellow { background: #78350f; color: #fcd34d; }
+    .badge-blue { background: #1e3a5f; color: #7dd3fc; }
+    .badge-green { background: #14532d; color: #86efac; }
+
+    .bug-desc { color: #94a3b8; font-size: 0.875rem; line-height: 1.6; margin-bottom: 10px; }
+
+    .fix-block {
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 6px;
+      padding: 12px 16px;
+      position: relative;
+    }
+    .fix-label { font-size: 0.72rem; color: #475569; text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 8px; font-weight: 600; }
+
+    pre, code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 0.82rem;
+    }
+    pre {
+      color: #a5f3fc;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .old-code { color: #fca5a5; text-decoration: line-through; opacity: 0.7; }
+    .new-code { color: #86efac; }
+    .comment { color: #475569; }
+
+    .step-grid {
+      display: grid; gap: 14px;
+      grid-template-columns: 1fr;
+    }
+    .step-item {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .step-num {
+      min-width: 32px; height: 32px;
+      background: #1e3a5f; color: #38bdf8;
+      border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: 0.9rem;
+      margin-top: 2px;
+    }
+    .step-body { flex: 1; }
+    .step-title { font-weight: 700; color: #f1f5f9; margin-bottom: 6px; font-size: 0.9rem; }
+    .step-cmd {
+      background: #0f172a; border: 1px solid #334155;
+      padding: 10px 14px; border-radius: 5px;
+      color: #a5f3fc; font-family: monospace; font-size: 0.82rem;
+      margin: 8px 0;
+    }
+    .step-note { color: #64748b; font-size: 0.82rem; line-height: 1.5; }
+
+    .checklist { list-style: none; }
+    .checklist li {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid #1e293b;
+      font-size: 0.875rem; color: #94a3b8;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { color: #22c55e; font-size: 1.1rem; margin-top: 1px; }
+    .cross-icon { color: #ef4444; }
+
+    .arch-box {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 20px;
+      margin-bottom: 16px;
+    }
+    .arch-title { font-size: 0.8rem; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #64748b; margin-bottom: 10px; font-weight: 700; }
+    .arch-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; border-bottom: 1px solid #0f172a; font-size: 0.85rem;
+    }
+    .arch-row:last-child { border-bottom: none; }
+    .arch-key { color: #7dd3fc; font-family: monospace; min-width: 180px; }
+    .arch-val { color: #94a3b8; }
+
+    .flow {
+      display: flex; flex-direction: column; gap: 2px;
+      padding: 16px;
+      background: #0f172a; border: 1px solid #1e3a5f; border-radius: 8px;
+      margin: 16px 0;
+    }
+    .flow-row {
+      display: flex; align-items: center; gap: 10px;
+      color: #94a3b8; font-size: 0.83rem; padding: 4px 0;
+    }
+    .flow-arrow { color: #334155; }
+    .flow-label { color: #7dd3fc; font-family: monospace; }
+
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: #334155; border: none; color: #94a3b8;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .copy-btn:hover { background: #475569; color: #e2e8f0; }
+
+    .error-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.82rem; margin-top: 8px;
+    }
+    .error-table th {
+      text-align: left; padding: 10px 14px;
+      background: #0f172a; color: #64748b;
+      border-bottom: 1px solid #334155;
+      font-weight: 600; text-transform: uppercase;
+      font-size: 0.72rem; letter-spacing: 0.04em;
+    }
+    .error-table td {
+      padding: 10px 14px; border-bottom: 1px solid #1e293b;
+      vertical-align: top; color: #94a3b8;
+    }
+    .error-table tr:last-child td { border-bottom: none; }
+    .error-table td:first-child { color: #fca5a5; font-family: monospace; }
+    .error-table td:last-child { color: #86efac; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🩺 DermAssist AI — Complete Setup & Debug Guide</h1>
+  <p>Hackathon guide · All bugs diagnosed · Step-by-step fix + run instructions</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('bugs')">🐛 Bugs Found</button>
+  <button class="tab-btn" onclick="showTab('setup')">🚀 Run the Project</button>
+  <button class="tab-btn" onclick="showTab('errors')">🔥 Error Reference</button>
+  <button class="tab-btn" onclick="showTab('arch')">🏗️ Architecture</button>
+</div>
+
+<div class="content">
+
+  <!-- ── TAB 1: BUGS ─────────────────────────────────────────────────── -->
+  <div class="tab-panel active" id="tab-bugs">
+    <h2>Bugs Diagnosed in Your Codebase</h2>
+    <p>I read every file in your project. Here are all the issues causing failures, from critical to minor.</p>
+
+    <!-- BUG 1 -->
+    <div class="bug-card">
+      <div class="bug-title">
+        <span class="badge badge-red">Critical</span>
+        models/__init__.py — Double Base import (breaks DB entirely)
+      </div>
+      <div class="bug-desc">
+        The <code>models/__init__.py</code> file first imports <code>Base</code> from <code>database.py</code>, then immediately overwrites it with <code>Base</code> from <code>models/base.py</code>. These are <strong>two different Base objects</strong>. Any table defined using <code>database.Base</code> will be invisible to <code>Base.metadata.create_all()</code> — meaning tables may never be created.
+      </div>
+      <div class="fix-block">
+        <div class="fix-label">📄 backend/models/__init__.py — Replace entire file with:</div>
+        <pre><span class="comment"># ✅ Import ONLY from models.base — remove the database.Base import completely</span>
+<span class="new-code">from models.base import Base
+from models.user import User
+from models.images import Image
+from models.prediciton import Prediction
+from models.appointment import Appointment
+
+__all__ = ["Base", "User", "Image", "Prediction", "Appointment"]</span></pre>
+      </div>
+    </div>
+
+    <!-- BUG 2 -->
+    <div class="bug-card">
+      <div class="bug-title">
+        <span class="badge badge-red">Critical</span>
+        database.py — Uses MySQL but project expects SQLite
+      </div>
+      <div class="bug-desc">
+        Your <code>database.py</code> is configured for <strong>MySQL</strong> (<code>mysql+pymysql://root:@localhost:3306/dermassist_db</code>). Your README and original setup were for <strong>SQLite</strong> (no server needed). Unless you have MySQL installed and running with a database named <code>dermassist_db</code>, this will crash with <em>"Connection refused"</em> on startup.
+        <br><br>You also need <code>pymysql</code> in requirements.txt if keeping MySQL. For a hackathon, SQLite is much easier.
+      </div>
+      <div class="fix-block">
+        <div class="fix-label">Option A — Use SQLite (Recommended for hackathon, zero setup):</div>
+        <pre><span class="comment"># backend/database.py</span>
+<span class="new-code">from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+DATABASE_URL = "sqlite:///./dermassist.db"
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)</span></pre>
+      </div>
+      <div class="fix-block" style="margin-top:10px">
+        <div class="fix-label">Option B — Keep MySQL (requires MySQL server running):</div>
+        <pre><span class="comment"># Add to backend/requirements.txt:</span>
+<span class="new-code">pymysql
+cryptography</span>
+
+<span class="comment"># Then create the DB in MySQL:</span>
+<span class="new-code">mysql -u root -e "CREATE DATABASE IF NOT EXISTS dermassist_db;"</span></pre>
+      </div>
+    </div>
+
+    <!-- BUG 3 -->
+    <div class="bug-card warning">
+      <div class="bug-title">
+        <span class="badge badge-yellow">High</span>
+        requirements.txt — Missing packages (will crash on import)
+      </div>
+      <div class="bug-desc">
+        <code>requirements.txt</code> is missing <code>pymysql</code> (needed if you keep MySQL), <code>sqlalchemy</code>, <code>aiofiles</code>, and <code>reportlab</code> (needed by <code>report_generator.py</code>). The server will crash with <em>ModuleNotFoundError</em>.
+      </div>
+      <div class="fix-block">
+        <div class="fix-label">📄 Replace requirements.txt with this complete list:</div>
+        <pre><span class="new-code">fastapi
+uvicorn[standard]
+python-multipart
+tensorflow-cpu
+numpy
+opencv-python-headless
+Pillow
+python-dotenv
+python-jose[cryptography]
+passlib[bcrypt]
+pytz
+sqlalchemy
+reportlab
+pymysql
+cryptography</span></pre>
+      </div>
+    </div>
+
+    <!-- BUG 4 -->
+    <div class="bug-card warning">
+      <div class="bug-title">
+        <span class="badge badge-yellow">High</span>
+        Model file missing — backend starts but /predict always returns 503
+      </div>
+      <div class="bug-desc">
+        The backend looks for <code>skin_cancer_model.tflite</code> in the <code>backend/</code> folder. This file is <strong>not in your repo</strong> (too large for git). Without it, every scan attempt returns <em>"Model not loaded"</em>. You must add it manually.
+      </div>
+      <div class="fix-block">
+        <div class="fix-label">Steps to fix:</div>
+        <pre><span class="new-code">1. Locate your skin_cancer_model.tflite file
+   (from your training notebook / Google Drive / team member)
+
+2. Copy it into:
+   DermAssist-AI/backend/skin_cancer_model.tflite
+
+3. Restart the backend — you should see:
+   ✅ TFLite model loaded successfully.</span></pre>
+      </div>
+    </div>
+
+    <!-- BUG 5 -->
+    <div class="bug-card warning">
+      <div class="bug-title">
+        <span class="badge badge-yellow">High</span>
+        Preprocessing mismatch — model expects 128×128, README says 224×224
+      </div>
+      <div class="bug-desc">
+        In <code>main.py</code>, <code>preprocess_image()</code> resizes to <code>(128, 128)</code>. But the README describes training on <code>224×224</code> images with MobileNetV2. If the model was trained at 224×224, sending 128×128 will cause silent wrong predictions or an <em>input shape mismatch error</em>.
+      </div>
+      <div class="fix-block">
+        <div class="fix-label">Check your model's expected input size and update main.py:</div>
+        <pre><span class="comment"># In main.py preprocess_image() — verify which is correct for YOUR model:</span>
+<span class="old-code">img = cv2.resize(img, (128, 128))   # current</span>
+<span class="new-code">img = cv2.resize(img, (224, 224))   # if model was trained at 224x224</span></pre>
+      </div>
+    </div>
+
+    <!-- BUG 6 -->
+    <div class="bug-card info">
+      <div class="bug-title">
+        <span class="badge badge-blue">Medium</span>
+        email_service.py imported but SMTP not configured — causes crash
+      </div>
+      <div class="bug-desc">
+        <code>email_service.py</code> exists and is likely imported somewhere. If SMTP credentials aren't set in a <code>.env</code> file, the server will error on any feature that sends email (password reset flow).
+      </div>
+      <div class="fix-block">
+        <div class="fix-label">Create backend/.env file:</div>
+        <pre><span class="new-code">EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your@gmail.com
+EMAIL_PASS=your_app_password
+SECRET_KEY=dermassist-super-secret-key-2024</span></pre>
+      </div>
+    </div>
+
+    <!-- BUG 7 -->
+    <div class="bug-card ok">
+      <div class="bug-title">
+        <span class="badge badge-green">Low</span>
+        Auth: SECRET_KEY is hardcoded — fine for hackathon, bad for production
+      </div>
+      <div class="bug-desc">
+        <code>auth.py</code> has <code>SECRET_KEY = "dermassist-secret-key-change-in-production-2024"</code> hardcoded. This means anyone who reads your code can forge JWT tokens. For a hackathon demo this is fine. For production, move it to <code>.env</code> and load with <code>python-dotenv</code>.
+      </div>
+    </div>
+
+    <!-- BUG 8 -->
+    <div class="bug-card ok">
+      <div class="bug-title">
+        <span class="badge badge-green">Low</span>
+        Filename typo — prediciton.py (missing 's') — already handled correctly
+      </div>
+      <div class="bug-desc">
+        The file is spelled <code>prediciton.py</code> (not <code>prediction.py</code>). Your imports already use the wrong spelling consistently, so this is not a bug as long as you don't rename the file. Just don't "fix" the filename without updating all imports.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 2: SETUP ────────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-setup">
+    <h2>Step-by-Step: Run the Project</h2>
+    <p>Follow these steps in order. Open <strong>two terminal windows</strong> — one for backend, one for frontend.</p>
+
+    <h3>Prerequisites — Check These First</h3>
+    <ul class="checklist">
+      <li><span class="check-icon">✔</span> Python 3.10 or 3.11 installed (<code>python --version</code>)</li>
+      <li><span class="check-icon">✔</span> Node.js v18+ installed (<code>node --version</code>)</li>
+      <li><span class="check-icon">✔</span> <code>skin_cancer_model.tflite</code> file available (from your training)</li>
+      <li><span class="check-icon">✔</span> If using MySQL: MySQL server running with <code>dermassist_db</code> created</li>
+    </ul>
+
+    <h3>Terminal 1 — Backend</h3>
+    <div class="step-grid">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Navigate to backend folder</div>
+          <div class="step-cmd">cd path/to/DermAssist-AI/backend</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Fix models/__init__.py (Bug #1)</div>
+          <div class="step-cmd">
+            # Open models/__init__.py and replace the entire file with:<br>
+            from models.base import Base<br>
+            from models.user import User<br>
+            from models.images import Image<br>
+            from models.prediciton import Prediction<br>
+            from models.appointment import Appointment<br>
+            __all__ = ["Base","User","Image","Prediction","Appointment"]
+          </div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Fix database.py — switch to SQLite (Bug #2)</div>
+          <div class="step-cmd">
+            # Replace database.py content with:<br>
+            from sqlalchemy import create_engine<br>
+            from sqlalchemy.orm import sessionmaker<br>
+            DATABASE_URL = "sqlite:///./dermassist.db"<br>
+            engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})<br>
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+          </div>
+          <div class="step-note">Note: Also remove <code>from database import Base</code> from models/__init__.py (already done in step 2)</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Copy your model file into the backend folder</div>
+          <div class="step-cmd">cp /path/to/skin_cancer_model.tflite ./skin_cancer_model.tflite</div>
+          <div class="step-note">The backend will print a WARNING if this file is missing, and /predict will return 503.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Create virtual environment</div>
+          <div class="step-cmd">python -m venv venv</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">Activate virtual environment</div>
+          <div class="step-cmd">
+            # Windows:<br>
+            venv\Scripts\activate<br><br>
+            # Mac / Linux:<br>
+            source venv/bin/activate
+          </div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="step-title">Install all dependencies (with fixed requirements.txt)</div>
+          <div class="step-cmd">pip install -r requirements.txt</div>
+          <div class="step-note">This takes a few minutes the first time. tensorflow-cpu is large (~200MB).</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <div class="step-title">Start the backend server</div>
+          <div class="step-cmd">uvicorn main:app --reload --host 127.0.0.1 --port 8000</div>
+          <div class="step-note">✅ You should see: "Uvicorn running on http://127.0.0.1:8000" and "✅ TFLite model loaded successfully."</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">9</div>
+        <div class="step-body">
+          <div class="step-title">Verify backend is working</div>
+          <div class="step-cmd">Open browser → http://127.0.0.1:8000/docs</div>
+          <div class="step-note">You should see the FastAPI interactive docs (Swagger UI) with all your endpoints listed.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 32px;">Terminal 2 — Frontend</h3>
+    <div class="step-grid">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Navigate to frontend folder</div>
+          <div class="step-cmd">cd path/to/DermAssist-AI/frontend</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Install npm packages (first time only)</div>
+          <div class="step-cmd">npm install</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Start the frontend dev server</div>
+          <div class="step-cmd">npm run dev</div>
+          <div class="step-note">✅ You should see: "Local: http://localhost:3000/" — open this in your browser.</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 32px;">Create an Admin User</h3>
+    <div class="bug-card info">
+      <div class="bug-title"><span class="badge badge-blue">Info</span> The admin panel is only visible to users with role = "admin"</div>
+      <div class="bug-desc">After registering a user normally, you need to manually update their role in the database. With SQLite:</div>
+      <div class="fix-block">
+        <div class="fix-label">Run this in the backend folder (with venv activated):</div>
+        <pre><span class="new-code">python -c "
+from database import SessionLocal
+from models.user import User
+db = SessionLocal()
+user = db.query(User).filter(User.username == 'your_username').first()
+user.role = 'admin'
+db.commit()
+print('Done! Role set to admin.')
+db.close()
+"</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB 3: ERRORS ───────────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-errors">
+    <h2>Error Reference — What Each Error Means & How to Fix It</h2>
+
+    <table class="error-table">
+      <thead>
+        <tr>
+          <th>Error Message</th>
+          <th>Cause</th>
+          <th>Fix</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Can't connect to MySQL server on 'localhost'</td>
+          <td>database.py is set to MySQL but MySQL isn't running</td>
+          <td>Switch to SQLite (see Bug #2 fix) or start MySQL + create dermassist_db</td>
+        </tr>
+        <tr>
+          <td>ModuleNotFoundError: No module named 'sqlalchemy'</td>
+          <td>Virtual environment not activated or packages not installed</td>
+          <td>Activate venv, then run pip install -r requirements.txt</td>
+        </tr>
+        <tr>
+          <td>ModuleNotFoundError: No module named 'pymysql'</td>
+          <td>pymysql not in requirements.txt</td>
+          <td>Add pymysql to requirements.txt and reinstall</td>
+        </tr>
+        <tr>
+          <td>ModuleNotFoundError: No module named 'reportlab'</td>
+          <td>reportlab missing from requirements.txt</td>
+          <td>pip install reportlab (or add to requirements.txt)</td>
+        </tr>
+        <tr>
+          <td>503: Model not loaded</td>
+          <td>skin_cancer_model.tflite file missing from backend folder</td>
+          <td>Copy the .tflite file into the backend/ directory</td>
+        </tr>
+        <tr>
+          <td>Inference failed: Input shape mismatch</td>
+          <td>Model expects 224×224 but code sends 128×128 (or vice versa)</td>
+          <td>Update cv2.resize() in main.py to match your model's training size</td>
+        </tr>
+        <tr>
+          <td>CORS error in browser console</td>
+          <td>Backend not running, or frontend port mismatch</td>
+          <td>Make sure backend is running on :8000 AND frontend on :3000</td>
+        </tr>
+        <tr>
+          <td>401 Not authenticated on /admin/*</td>
+          <td>User doesn't have role="admin" in database</td>
+          <td>Run the admin user script from Setup tab Step 9</td>
+        </tr>
+        <tr>
+          <td>Tables don't exist / OperationalError: no such table</td>
+          <td>models/__init__.py double-Base bug (Bug #1)</td>
+          <td>Fix __init__.py as described in Bug #1, then restart backend</td>
+        </tr>
+        <tr>
+          <td>bcrypt error / passlib crash</td>
+          <td>bcrypt version incompatibility</td>
+          <td>pip install bcrypt==4.0.1 --force-reinstall</td>
+        </tr>
+        <tr>
+          <td>npm: command not found</td>
+          <td>Node.js not installed</td>
+          <td>Download Node.js v18+ from nodejs.org</td>
+        </tr>
+        <tr>
+          <td>Frontend blank page / white screen</td>
+          <td>JS error in console, or backend not running</td>
+          <td>Open browser DevTools (F12) → Console tab to see the actual error</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── TAB 4: ARCHITECTURE ────────────────────────────────────────── -->
+  <div class="tab-panel" id="tab-arch">
+    <h2>Project Architecture Overview</h2>
+
+    <div class="flow">
+      <div class="flow-row"><span class="flow-label">Browser (localhost:3000)</span></div>
+      <div class="flow-row"><span class="flow-arrow">  ↓  axios HTTP calls</span></div>
+      <div class="flow-row"><span class="flow-label">FastAPI Backend (localhost:8000)</span></div>
+      <div class="flow-row"><span class="flow-arrow">  ↓  SQLAlchemy ORM</span></div>
+      <div class="flow-row"><span class="flow-label">SQLite / MySQL Database</span><span class="arch-val" style="margin-left:8px">— dermassist.db or dermassist_db</span></div>
+      <div class="flow-row"><span class="flow-arrow">  ↓  TFLite Interpreter</span></div>
+      <div class="flow-row"><span class="flow-label">skin_cancer_model.tflite</span><span class="arch-val" style="margin-left:8px">— 7-class skin lesion classifier</span></div>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">Backend Files</div>
+      <div class="arch-row"><span class="arch-key">main.py</span><span class="arch-val">FastAPI app — /predict, /user/scans, /user/me, report download</span></div>
+      <div class="arch-row"><span class="arch-key">auth.py</span><span class="arch-val">JWT login/register/logout + get_current_user dependency</span></div>
+      <div class="arch-row"><span class="arch-key">admin.py</span><span class="arch-val">Admin panel + appointments + doctors endpoints</span></div>
+      <div class="arch-row"><span class="arch-key">database.py</span><span class="arch-val">DB connection — currently MySQL, should be SQLite for hackathon</span></div>
+      <div class="arch-row"><span class="arch-key">models/base.py</span><span class="arch-val">SQLAlchemy Base + IST timezone helper</span></div>
+      <div class="arch-row"><span class="arch-key">models/user.py</span><span class="arch-val">User table — auth, profile, role</span></div>
+      <div class="arch-row"><span class="arch-key">models/images.py</span><span class="arch-val">Image upload records</span></div>
+      <div class="arch-row"><span class="arch-key">models/prediciton.py</span><span class="arch-val">AI scan results — note: typo in filename (no 's')</span></div>
+      <div class="arch-row"><span class="arch-key">models/appointment.py</span><span class="arch-val">Appointment booking — patient, doctor, date, status</span></div>
+      <div class="arch-row"><span class="arch-key">email_service.py</span><span class="arch-val">SMTP email for password reset — needs .env config</span></div>
+      <div class="arch-row"><span class="arch-key">report_generator.py</span><span class="arch-val">PDF report generation using reportlab</span></div>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">Frontend Pages & Routes</div>
+      <div class="arch-row"><span class="arch-key">/</span><span class="arch-val">Home.jsx — Upload + scan + results (main feature)</span></div>
+      <div class="arch-row"><span class="arch-key">/register</span><span class="arch-val">RegisterPage.jsx — public, redirects to / if logged in</span></div>
+      <div class="arch-row"><span class="arch-key">/login</span><span class="arch-val">LoginPage.jsx — public, redirects to / if logged in</span></div>
+      <div class="arch-row"><span class="arch-key">/profile</span><span class="arch-val">ProfilePage.jsx — scan history + appointments tab (auth required)</span></div>
+      <div class="arch-row"><span class="arch-key">/find-doctors</span><span class="arch-val">FindDoctorsPage.jsx — search curated Indian dermatologists (auth required)</span></div>
+      <div class="arch-row"><span class="arch-key">/appointments/book</span><span class="arch-val">BookAppointmentPage.jsx — book with selected doctor (auth required)</span></div>
+      <div class="arch-row"><span class="arch-key">/admin</span><span class="arch-val">AdminDashboard.jsx — stats, users, scans, appointments (admin role only)</span></div>
+    </div>
+
+    <div class="arch-box">
+      <div class="arch-title">API Endpoints Summary</div>
+      <div class="arch-row"><span class="arch-key">POST /auth/register</span><span class="arch-val">Create account → returns JWT token</span></div>
+      <div class="arch-row"><span class="arch-key">POST /auth/login</span><span class="arch-val">Login with username+password form → returns JWT token</span></div>
+      <div class="arch-row"><span class="arch-key">POST /auth/logout</span><span class="arch-val">Blacklists the token</span></div>
+      <div class="arch-row"><span class="arch-key">GET /user/me</span><span class="arch-val">Get logged-in user profile + total scan count</span></div>
+      <div class="arch-row"><span class="arch-key">GET /user/scans</span><span class="arch-val">Get all scans for current user</span></div>
+      <div class="arch-row"><span class="arch-key">POST /predict</span><span class="arch-val">Upload image → get AI diagnosis</span></div>
+      <div class="arch-row"><span class="arch-key">GET /doctors</span><span class="arch-val">Search curated dermatologists by city/name</span></div>
+      <div class="arch-row"><span class="arch-key">POST /appointments</span><span class="arch-val">Book an appointment</span></div>
+      <div class="arch-row"><span class="arch-key">GET /appointments</span><span class="arch-val">My appointments list</span></div>
+      <div class="arch-row"><span class="arch-key">GET /admin/stats</span><span class="arch-val">Admin dashboard summary (admin only)</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showTab(id) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

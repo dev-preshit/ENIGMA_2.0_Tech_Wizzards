@@ -10,6 +10,9 @@ import secrets
 
 from database import SessionLocal
 from models.user import User
+from models.images import Image
+from models.prediciton import Prediction
+from models.appointment import Appointment
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SECRET_KEY = "dermassist-secret-key-change-in-production-2024"

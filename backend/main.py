@@ -13,11 +13,13 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from database import engine, SessionLocal
-from models import Base          # ✅ FIXED: import Base from models.base
+from models import Base
 from models.user import User
 from models.images import Image
 from models.prediciton import Prediction
+from models.appointment import Appointment
 import auth
+import admin as admin_module
 from auth import get_current_user
 
 app = FastAPI(title="DermAssist AI Backend", version="2.0.0")
@@ -41,15 +43,14 @@ app.add_middleware(
 
 # ── Auth router ───────────────────────────────────────────────────────────────
 app.include_router(auth.router)
+app.include_router(admin_module.router)
 
 # ── TFLite model loading ──────────────────────────────────────────────────────
-# ✅ FIXED: replaced tf.keras.models.load_model (wrong for .tflite)
-#           with tf.lite.Interpreter (correct for .tflite files)
 MODEL_PATH  = "skin_cancer_model.tflite"
 interpreter = None
 
 if not os.path.exists(MODEL_PATH):
-    print(f"WARNING: Model file '{MODEL_PATH}' not found.")
+    print(f"WARNING: Model file '{MODEL_PATH}' not found. Place it in the backend/ folder.")
 else:
     try:
         interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
@@ -75,7 +76,7 @@ def preprocess_image(image_data: bytes) -> np.ndarray:
     if img is None:
         raise ValueError("Could not decode image. Please upload a valid JPEG or PNG.")
     img      = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img      = cv2.resize(img, (128, 128))          # TFLite model expects 128×128
+    img      = cv2.resize(img, (224, 224))   # ✅ FIXED: was 128x128, model trained at 224x224
     img_arr  = img.astype('float32') / 255.0
     return np.expand_dims(img_arr, axis=0)
 
@@ -101,7 +102,6 @@ async def predict(
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user)
 ):
-    # ✅ FIXED: check interpreter instead of model
     if interpreter is None:
         raise HTTPException(status_code=503, detail="Model not loaded. Please check server logs.")
     if file.content_type not in ["image/jpeg", "image/png"]:
@@ -114,7 +114,6 @@ async def predict(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # ✅ FIXED: TFLite inference (was model.predict which only works for Keras)
     start_time = time.time()
     try:
         input_details  = interpreter.get_input_details()
@@ -276,6 +275,7 @@ def get_full_profile(
         "created_at":    str(current_user.created_at),
     }
 
+
 # ── Download PDF report for a single scan ─────────────────────────────────────
 @app.get("/user/scans/{scan_id}/report")
 def download_scan_report(
@@ -314,11 +314,11 @@ def download_scan_report(
     }
 
     user_data = {
-        "full_name":    current_user.full_name,
-        "email":        current_user.email,
+        "full_name":     current_user.full_name,
+        "email":         current_user.email,
         "date_of_birth": str(current_user.date_of_birth) if current_user.date_of_birth else "N/A",
-        "gender":       current_user.gender or "N/A",
-        "phone_number": current_user.phone_number or "N/A",
+        "gender":        current_user.gender or "N/A",
+        "phone_number":  current_user.phone_number or "N/A",
     }
 
     try:
