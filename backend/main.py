@@ -76,7 +76,7 @@ def preprocess_image(image_data: bytes) -> np.ndarray:
     if img is None:
         raise ValueError("Could not decode image. Please upload a valid JPEG or PNG.")
     img      = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img      = cv2.resize(img, (224, 224))   # ✅ FIXED: was 128x128, model trained at 224x224
+    img      = cv2.resize(img, (128, 128))   # ✅ FIXED: was 128x128, model trained at 224x224
     img_arr  = img.astype('float32') / 255.0
     return np.expand_dims(img_arr, axis=0)
 

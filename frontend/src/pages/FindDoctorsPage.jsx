@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, MapPin, Star, Phone, Mail, Clock, Calendar,
   ChevronRight, Stethoscope, Award, Languages, IndianRupee,
-  Filter, X, Check, Loader2, Building2, User
+  X, Check, Loader2, Building2, Navigation, AlertCircle
 } from 'lucide-react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
@@ -11,7 +11,27 @@ import { useAuth } from '../context/AuthContext'
 
 const API = 'http://localhost:8000'
 
-// ── Star rating ───────────────────────────────────────────────────────────────
+// City coordinates for distance calculation
+const CITY_COORDS = {
+  'Delhi':      { lat: 28.6139, lng: 77.2090 },
+  'Mumbai':     { lat: 19.0760, lng: 72.8777 },
+  'Chennai':    { lat: 13.0827, lng: 80.2707 },
+  'Pune':       { lat: 18.5204, lng: 73.8567 },
+  'Kochi':      { lat: 9.9312,  lng: 76.2673 },
+  'Ahmedabad':  { lat: 23.0225, lng: 72.5714 },
+  'Hyderabad':  { lat: 17.3850, lng: 78.4867 },
+  'Chandigarh': { lat: 30.7333, lng: 76.7794 },
+}
+
+// Haversine distance in km
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 const StarRating = ({ rating }) => (
   <div className="flex items-center gap-0.5">
     {[1, 2, 3, 4, 5].map(i => (
@@ -24,29 +44,25 @@ const StarRating = ({ rating }) => (
 // ── Doctor detail drawer ──────────────────────────────────────────────────────
 const DoctorDrawer = ({ doctor, onClose, onBook }) => {
   const [selectedSlot, setSelectedSlot] = useState('')
-  const [selectedDay, setSelectedDay]   = useState('')
-
+  const [selectedDay,  setSelectedDay]  = useState('')
   const DAYS_FULL = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday' }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-end">
-      <motion.div
-        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+      <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className="w-full max-w-md bg-white dark:bg-gray-900 h-full overflow-y-auto shadow-2xl"
       >
-        {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 px-5 py-4 z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">Doctor Details</h2>
-            <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 transition">
               <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </button>
           </div>
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Doctor header */}
           <div className="flex items-start gap-4">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-lg flex-shrink-0">
               {doctor.image_placeholder}
@@ -59,10 +75,14 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
                 <StarRating rating={doctor.rating} />
                 <span className="text-xs text-gray-400">({doctor.review_count} reviews)</span>
               </div>
+              {doctor.distance_km != null && (
+                <div className="mt-1 flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                  <Navigation className="w-3 h-3" /> {doctor.distance_km} km from you
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Key info chips */}
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full font-medium">
               <Award className="w-3 h-3" /> {doctor.experience_years} yrs exp
@@ -75,7 +95,6 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             </span>
           </div>
 
-          {/* Clinic info */}
           <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 space-y-3">
             <div className="flex items-start gap-3">
               <Building2 className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -94,7 +113,6 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             </div>
           </div>
 
-          {/* Specializes in */}
           <div>
             <p className="text-sm font-semibold text-gray-800 dark:text-white mb-2">Specializes In</p>
             <div className="flex flex-wrap gap-2">
@@ -104,7 +122,6 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             </div>
           </div>
 
-          {/* Available days */}
           <div>
             <p className="text-sm font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-blue-500" /> Available Days
@@ -112,11 +129,7 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             <div className="flex flex-wrap gap-2">
               {doctor.available_days.map(day => (
                 <button key={day} onClick={() => setSelectedDay(d => d === day ? '' : day)}
-                  className={`text-xs px-3 py-1.5 rounded-xl font-medium transition ${
-                    selectedDay === day
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600'
-                  }`}
+                  className={`text-xs px-3 py-1.5 rounded-xl font-medium transition ${selectedDay === day ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-50 hover:text-blue-600'}`}
                 >
                   {DAYS_FULL[day] || day}
                 </button>
@@ -124,7 +137,6 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             </div>
           </div>
 
-          {/* Available slots */}
           <div>
             <p className="text-sm font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-1.5">
               <Clock className="w-4 h-4 text-blue-500" /> Available Time Slots
@@ -132,11 +144,7 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             <div className="grid grid-cols-2 gap-2">
               {doctor.available_slots.map(slot => (
                 <button key={slot} onClick={() => setSelectedSlot(s => s === slot ? '' : slot)}
-                  className={`text-sm py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-1.5 ${
-                    selectedSlot === slot
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/10'
-                  }`}
+                  className={`text-sm py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-1.5 ${selectedSlot === slot ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300 hover:bg-blue-50'}`}
                 >
                   {selectedSlot === slot && <Check className="w-3.5 h-3.5" />}
                   {slot}
@@ -145,13 +153,10 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
             </div>
           </div>
 
-          {/* Book button */}
-          <button
-            onClick={() => onBook(doctor, selectedSlot, selectedDay)}
-            className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition shadow-lg shadow-blue-200 dark:shadow-blue-900/30 flex items-center justify-center gap-2"
+          <button onClick={() => onBook(doctor, selectedSlot, selectedDay)}
+            className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition shadow-lg flex items-center justify-center gap-2"
           >
-            <Calendar className="w-5 h-5" />
-            Book Appointment
+            <Calendar className="w-5 h-5" /> Book Appointment
           </button>
         </div>
       </motion.div>
@@ -162,18 +167,14 @@ const DoctorDrawer = ({ doctor, onClose, onBook }) => {
 // ── Doctor card ───────────────────────────────────────────────────────────────
 const DoctorCard = ({ doctor, onSelect, index }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.06 }}
-    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all duration-200 cursor-pointer group"
+    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }}
+    className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group"
     onClick={() => onSelect(doctor)}
   >
     <div className="flex items-start gap-4">
-      {/* Avatar */}
       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-md flex-shrink-0 group-hover:scale-105 transition-transform">
         {doctor.image_placeholder}
       </div>
-
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -182,12 +183,16 @@ const DoctorCard = ({ doctor, onSelect, index }) => (
           </div>
           <ChevronRight className="w-5 h-5 text-gray-300 dark:text-gray-600 flex-shrink-0 group-hover:text-blue-500 transition-colors mt-0.5" />
         </div>
-
         <StarRating rating={doctor.rating} />
-
-        <div className="flex items-center gap-1.5 mt-2">
-          <MapPin className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-xs text-gray-500 dark:text-gray-400">{doctor.city} · {doctor.clinic}</span>
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <Building2 className="w-3 h-3" /> {doctor.city} · {doctor.clinic}
+          </span>
+          {doctor.distance_km != null && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
+              <Navigation className="w-3 h-3" /> {doctor.distance_km} km
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -202,8 +207,7 @@ const DoctorCard = ({ doctor, onSelect, index }) => (
         )}
       </div>
       <div className="flex items-center gap-1 text-sm font-bold text-gray-800 dark:text-white">
-        <IndianRupee className="w-3.5 h-3.5" />
-        <span>{doctor.consultation_fee}</span>
+        <IndianRupee className="w-3.5 h-3.5" />{doctor.consultation_fee}
       </div>
     </div>
 
@@ -220,25 +224,42 @@ const DoctorCard = ({ doctor, onSelect, index }) => (
 // ═══════════════════════════════════════════════════════════════════════════════
 const FindDoctorsPage = () => {
   const { isLoggedIn } = useAuth()
-  const navigate        = useNavigate()
+  const navigate = useNavigate()
 
-  const [doctors, setDoctors]     = useState([])
-  const [cities, setCities]       = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
-  const [cityFilter, setCityFilter] = useState('')
-  const [selected, setSelected]   = useState(null)
+  const [doctors,     setDoctors]     = useState([])
+  const [cities,      setCities]      = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [search,      setSearch]      = useState('')
+  const [cityFilter,  setCityFilter]  = useState('')
+  const [selected,    setSelected]    = useState(null)
+  const [userLocation, setUserLocation] = useState(null)   // { lat, lng }
+  const [gpsLoading,   setGpsLoading]  = useState(false)
+  const [gpsError,     setGpsError]    = useState('')
+  const [sortByDist,   setSortByDist]  = useState(false)
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = async (city = cityFilter, q = search) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (cityFilter) params.append('city', cityFilter)
-      if (search)     params.append('search', search)
+      if (city) params.append('city', city)
+      if (q)    params.append('search', q)
       const r = await axios.get(`${API}/doctors?${params}`)
-      setDoctors(r.data.doctors || [])
+      let docs = r.data.doctors || []
+
+      // Attach distance if user location known
+      if (userLocation) {
+        docs = docs.map(d => {
+          const coords = CITY_COORDS[d.city]
+          const dist = coords
+            ? Math.round(getDistance(userLocation.lat, userLocation.lng, coords.lat, coords.lng))
+            : null
+          return { ...d, distance_km: dist }
+        })
+        if (sortByDist) docs.sort((a, b) => (a.distance_km ?? 9999) - (b.distance_km ?? 9999))
+      }
+
+      setDoctors(docs)
     } catch {
-      // fallback: show empty
       setDoctors([])
     }
     setLoading(false)
@@ -248,22 +269,32 @@ const FindDoctorsPage = () => {
     try {
       const r = await axios.get(`${API}/doctors/cities`)
       setCities(r.data.cities || [])
-    } catch { /* ignore */ }
+    } catch {}
   }
 
   useEffect(() => { fetchCities() }, [])
-  useEffect(() => { fetchDoctors() }, [cityFilter])
+  useEffect(() => { fetchDoctors() }, [cityFilter, userLocation, sortByDist])
 
-  const handleSearch = (e) => {
-    e.preventDefault()
-    fetchDoctors()
+  const handleSearch = (e) => { e.preventDefault(); fetchDoctors(cityFilter, search) }
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) { setGpsError('Geolocation not supported by your browser'); return }
+    setGpsLoading(true); setGpsError('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        setSortByDist(true)
+        setGpsLoading(false)
+      },
+      () => {
+        setGpsError('Could not get your location. Please allow location access.')
+        setGpsLoading(false)
+      }
+    )
   }
 
   const handleBook = (doctor, slot, day) => {
-    if (!isLoggedIn) {
-      navigate('/login')
-      return
-    }
+    if (!isLoggedIn) { navigate('/login'); return }
     navigate('/appointments/book', { state: { doctor, slot, day } })
   }
 
@@ -272,15 +303,14 @@ const FindDoctorsPage = () => {
       {/* Hero header */}
       <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 text-white pt-12 pb-16 px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.12),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(6,182,212,0.2),transparent_60%)]" />
         <div className="relative max-w-3xl mx-auto text-center">
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm mb-4">
-              <Stethoscope className="w-4 h-4" /> Find Verified Dermatologists
+              <Stethoscope className="w-4 h-4" /> Find Verified Dermatologists Near You
             </div>
             <h1 className="text-3xl md:text-4xl font-extrabold mb-3">Find a Doctor Near You</h1>
             <p className="text-blue-100 text-base max-w-xl mx-auto">
-              Search from our curated list of expert dermatologists across India. Book appointments instantly.
+              Use GPS to find the closest dermatologists or search by city. Book appointments instantly.
             </p>
           </motion.div>
 
@@ -290,8 +320,7 @@ const FindDoctorsPage = () => {
           >
             <div className="flex-1 relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                value={search} onChange={e => setSearch(e.target.value)}
+              <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder="Search doctor, specialty, condition..."
                 className="w-full pl-11 pr-4 py-3.5 rounded-2xl text-gray-900 text-sm shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
               />
@@ -300,31 +329,58 @@ const FindDoctorsPage = () => {
               Search
             </button>
           </motion.form>
+
+          {/* GPS Button */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-4">
+            <button onClick={detectLocation} disabled={gpsLoading}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold rounded-2xl transition text-sm border border-white/30 disabled:opacity-60"
+            >
+              {gpsLoading
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Detecting location...</>
+                : <><Navigation className="w-4 h-4" /> {userLocation ? 'Location detected ✓' : 'Use My Location'}</>
+              }
+            </button>
+            {gpsError && (
+              <div className="mt-2 flex items-center justify-center gap-1.5 text-xs text-red-200">
+                <AlertCircle className="w-3.5 h-3.5" /> {gpsError}
+              </div>
+            )}
+            {userLocation && (
+              <p className="text-xs text-blue-200 mt-1">Showing doctors sorted by distance from your location</p>
+            )}
+          </motion.div>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 -mt-6">
         {/* City filter pills */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="flex gap-2 flex-wrap mb-6"
+          className="flex gap-2 flex-wrap mb-4"
         >
           <button onClick={() => setCityFilter('')}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition ${
-              !cityFilter ? 'bg-blue-600 text-white shadow-blue-200 dark:shadow-blue-900/30' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'
-            }`}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition ${!cityFilter ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50'}`}
           >
             <MapPin className="w-3.5 h-3.5" /> All Cities
           </button>
           {cities.map(city => (
             <button key={city} onClick={() => setCityFilter(city)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition ${
-                cityFilter === city ? 'bg-blue-600 text-white shadow-blue-200 dark:shadow-blue-900/30' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition ${cityFilter === city ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >
               {city}
             </button>
           ))}
         </motion.div>
+
+        {/* Sort toggle */}
+        {userLocation && (
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={() => setSortByDist(v => !v)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium border transition ${sortByDist ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'}`}
+            >
+              <Navigation className="w-3 h-3 inline mr-1" /> Sort by Distance
+            </button>
+          </div>
+        )}
 
         {/* Results count */}
         <div className="flex items-center justify-between mb-4">
@@ -333,7 +389,7 @@ const FindDoctorsPage = () => {
           </p>
         </div>
 
-        {/* Doctor cards grid */}
+        {/* Cards */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -354,14 +410,9 @@ const FindDoctorsPage = () => {
         )}
       </div>
 
-      {/* Detail drawer */}
       <AnimatePresence>
         {selected && (
-          <DoctorDrawer
-            doctor={selected}
-            onClose={() => setSelected(null)}
-            onBook={handleBook}
-          />
+          <DoctorDrawer doctor={selected} onClose={() => setSelected(null)} onBook={handleBook} />
         )}
       </AnimatePresence>
     </div>

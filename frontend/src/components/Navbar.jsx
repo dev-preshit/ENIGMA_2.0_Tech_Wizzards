@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Activity, User, LogOut, ChevronDown, Sun, Moon } from 'lucide-react'
+import { Activity, User, LogOut, ChevronDown, Sun, Moon, Calendar, Shield } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -17,24 +17,20 @@ const Navbar = () => {
   const navLinks = [
     { path: '/',             label: 'Home' },
     { path: '/how-it-works', label: 'How It Works' },
+    { path: '/find-doctors', label: 'Find Doctors' },
     { path: '/about',        label: 'About' },
-    { path: '/safety',       label: 'Safety' },
   ]
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false)
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdownOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const handleLogout = () => {
-    logout()
-    navigate('/register')
-    setDropdownOpen(false)
+    logout(); navigate('/register'); setDropdownOpen(false)
   }
 
   const getInitials = (name) => {
@@ -48,7 +44,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
             <Activity className="w-8 h-8 text-blue-600" />
             <span className="text-xl font-bold text-gray-900 dark:text-white">DermAssist AI</span>
           </Link>
@@ -66,22 +62,43 @@ const Navbar = () => {
                 {link.label}
               </Link>
             ))}
+
+            {/* Appointments — visible when logged in */}
+            {isLoggedIn && (
+              <Link to="/appointments/book"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                  isActive('/appointments/book')
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-blue-600'
+                }`}
+              >
+                <Calendar className="w-4 h-4" /> Appointments
+              </Link>
+            )}
+
+            {/* Admin Panel — visible only to admins */}
+            {isLoggedIn && user?.role === 'admin' && (
+              <Link to="/admin"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                  isActive('/admin')
+                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700'
+                    : 'text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+                }`}
+              >
+                <Shield className="w-4 h-4" /> Admin Panel
+              </Link>
+            )}
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-3">
 
-            {/* ✅ FIXED: Moon shows when LIGHT (click to go dark)
-                         Sun shows when DARK (click to go light)       */}
-            <button
-              onClick={toggle}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+            {/* Theme toggle */}
+            <button onClick={toggle}
+              className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDark
-                ? <Sun  className="w-4 h-4" />  
-                : <Moon className="w-4 h-4" />
-              }
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {/* User avatar dropdown */}
@@ -105,12 +122,34 @@ const Navbar = () => {
                     <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
                       <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{user.full_name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                      {user.role === 'admin' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 mt-1">
+                          <Shield className="w-2.5 h-2.5" /> ADMIN
+                        </span>
+                      )}
                     </div>
                     <Link to="/profile" onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors"
                     >
                       <User className="w-4 h-4" /> My Profile
                     </Link>
+                    <Link to="/find-doctors" onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors"
+                    >
+                      <Activity className="w-4 h-4" /> Find Doctors
+                    </Link>
+                    <Link to="/appointments/book" onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-colors"
+                    >
+                      <Calendar className="w-4 h-4" /> Book Appointment
+                    </Link>
+                    {user?.role === 'admin' && (
+                      <Link to="/admin" onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors font-medium"
+                      >
+                        <Shield className="w-4 h-4" /> Admin Panel
+                      </Link>
+                    )}
                     <button onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                     >
@@ -121,6 +160,14 @@ const Navbar = () => {
               </div>
             )}
 
+            {/* Login button if not logged in */}
+            {!isLoggedIn && (
+              <Link to="/login"
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </div>
